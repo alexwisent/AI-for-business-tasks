@@ -69,6 +69,7 @@ export type Equipment = {
 
 export type LocationCategory = {
   id: string;
+  /** id владельца, создавшего категорию (удалять/редактировать может только он) */
   ownerId: string;
   name: string;
 };

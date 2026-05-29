@@ -13,40 +13,62 @@ export function StudioPublicPage() {
 
   return (
     <div>
-      <div className="card" style={{ marginBottom: "1rem" }}>
+      <div className="card studio-banner" style={{ marginBottom: "1.5rem" }}>
+        <p className="page-header" style={{ margin: 0 }}>
+          <Link to="/" className="back-link" style={{ color: "#94a3b8" }}>
+            ← Каталог
+          </Link>
+        </p>
         <h1 style={{ marginTop: 0 }}>{studio.name}</h1>
-        <p className="muted">{studio.description}</p>
+        <p className="muted" style={{ marginBottom: 0, maxWidth: "52ch" }}>
+          {studio.description}
+        </p>
       </div>
 
-      <h2>Локации</h2>
+      <div className="section-head">
+        <h2>Локации</h2>
+        {locs.length > 0 && <span className="muted">{locs.length}</span>}
+      </div>
       {locs.length === 0 && <p className="muted">Локаций пока нет.</p>}
       <div className="grid cols-3">
         {locs.map((l) => (
-          <Link key={l.id} to={`/location/${l.id}`} className="card" style={{ textDecoration: "none", color: "inherit" }}>
-            {(l.images[0] && <img className="thumb" alt="" src={l.images[0]} />) || (
-              <div className="thumb" style={{ background: "#e2e8f0" }} />
+          <Link key={l.id} to={`/location/${l.id}`} className="card catalog-card">
+            {l.images[0] ? (
+              <img className="thumb" alt="" src={l.images[0]} />
+            ) : (
+              <div className="thumb-placeholder" />
             )}
-            <h3 style={{ marginBottom: "0.25rem" }}>{l.title}</h3>
-            <p className="muted" style={{ marginTop: 0 }}>
-              {l.shortDescription}
-            </p>
+            <div className="catalog-body">
+              <h3>{l.title}</h3>
+              <p className="muted" style={{ margin: 0 }}>
+                {l.shortDescription}
+              </p>
+              <span className="price-tag" style={{ marginTop: "0.5rem" }}>
+                от {l.hourlyPrice} ₽/ч
+              </span>
+            </div>
           </Link>
         ))}
       </div>
 
-      <h2 style={{ marginTop: "1.5rem" }}>Оборудование в студии</h2>
+      <div className="section-head">
+        <h2>Оборудование в студии</h2>
+        {eqs.length > 0 && <span className="muted">{eqs.length}</span>}
+      </div>
       {eqs.length === 0 && <p className="muted">Оборудования пока нет.</p>}
       <div className="grid cols-3">
         {eqs.map((e) => (
-          <Link key={e.id} to={`/equipment/${e.id}`} className="eq-card" style={{ textDecoration: "none", color: "inherit" }}>
+          <Link key={e.id} to={`/equipment/${e.id}`} className="eq-card">
             <div style={{ position: "relative" }}>
-              {(e.images[0] && <img className="thumb" alt="" src={e.images[0]} style={{ height: 160 }} />) || (
-                <div className="thumb" style={{ height: 160, background: "#e2e8f0" }} />
+              {e.images[0] ? (
+                <img className="thumb" alt="" src={e.images[0]} />
+              ) : (
+                <div className="thumb-placeholder" />
               )}
             </div>
-            <div style={{ padding: "0.75rem 1rem" }}>
+            <div style={{ padding: "0.85rem 1.1rem 1.1rem" }}>
               <div className="pill">{equipmentCategoryLabel[e.category]}</div>
-              <h3 style={{ margin: "0.35rem 0" }}>{e.name}</h3>
+              <h3 style={{ margin: "0.4rem 0 0.25rem", fontSize: "1.05rem" }}>{e.name}</h3>
               <p className="muted" style={{ margin: 0 }}>
                 {e.quantity} шт. · от {e.hourlyPrice} ₽/ч
               </p>

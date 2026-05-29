@@ -7,8 +7,15 @@ export function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="app-shell">
       <header className="top-nav">
-        <strong>Студии (локально)</strong>
-        <NavLink to="/">Каталог</NavLink>
+        <Link to="/" className="brand">
+          <span className="brand-mark" aria-hidden>
+            ◉
+          </span>
+          StudioRent
+        </Link>
+        <NavLink to="/" end>
+          Каталог
+        </NavLink>
         {!user && (
           <>
             <Link to="/login">Вход</Link>
@@ -18,7 +25,7 @@ export function Shell({ children }: { children: ReactNode }) {
         {user?.role === "owner" && (
           <>
             <Link to="/owner">Мои студии</Link>
-            <Link to="/owner/categories">Категории локаций</Link>
+            <Link to="/owner/categories">Категории</Link>
             <Link to="/owner/closures">Закрытия</Link>
             <Link to="/owner/analytics">Аналитика</Link>
           </>
@@ -26,8 +33,8 @@ export function Shell({ children }: { children: ReactNode }) {
         {user?.role === "renter" && <Link to="/me">Мои брони</Link>}
         <span className="nav-spacer" />
         {user && (
-          <span style={{ opacity: 0.9 }}>
-            {user.nickname} ({user.role === "owner" ? "владелец" : "арендатор"})
+          <span className="nav-user">
+            {user.nickname} · {user.role === "owner" ? "владелец" : "арендатор"}
           </span>
         )}
         {user && (
@@ -37,6 +44,7 @@ export function Shell({ children }: { children: ReactNode }) {
         )}
       </header>
       <main className="page">{children}</main>
+      <footer className="site-footer">Аренда фотостудий · демо в браузере</footer>
     </div>
   );
 }
@@ -47,21 +55,6 @@ export function useToast() {
     setMsg(m);
     window.setTimeout(() => setMsg(null), 2600);
   };
-  const el = msg ? (
-    <div
-      style={{
-        position: "fixed",
-        right: 16,
-        bottom: 16,
-        background: "#0f172a",
-        color: "#fff",
-        padding: "0.65rem 0.9rem",
-        borderRadius: 10,
-        zIndex: 50,
-      }}
-    >
-      {msg}
-    </div>
-  ) : null;
+  const el = msg ? <div className="toast">{msg}</div> : null;
   return { show, el };
 }

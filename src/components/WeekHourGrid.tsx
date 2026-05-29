@@ -27,6 +27,8 @@ export type WeekSegment = {
   end: string;
   kind: "busy" | "mine" | "closure";
   title?: string;
+  /** для kind === "mine" — отмена с карточки или списка */
+  bookingId?: string;
 };
 
 type Props = {
@@ -63,9 +65,11 @@ export function WeekHourGrid({
   const hoursBand = Array.from({ length: 24 }, (_, h) => h);
 
   const [a, setA] = React.useState<{ d: number; h: number } | null>(null);
+  const [hover, setHover] = React.useState<{ d: number; h: number } | null>(null);
 
   React.useEffect(() => {
     setA(null);
+    setHover(null);
   }, [weekStart.getTime(), interactive]);
 
   function scanCell(dayIndex: number, hour: number) {
@@ -96,9 +100,10 @@ export function WeekHourGrid({
     if (busy) return "cell busy";
     if (mine) return "cell mine";
 
-    if (a) {
-      const i0 = a.d * 100 + a.h;
-      const i1 = dayIndex * 100 + hour;
+    const anchor = hover ?? a;
+    if (anchor) {
+      const i0 = a!.d * 100 + a!.h;
+      const i1 = anchor.d * 100 + anchor.h;
       const lo = Math.min(i0, i1);
       const hi = Math.max(i0, i1);
       const cur = dayIndex * 100 + hour;
@@ -116,8 +121,8 @@ export function WeekHourGrid({
     for (let cur = lo; cur <= hi; cur++) {
       const d = Math.floor(cur / 100);
       const h = cur % 100;
-      const { inWh, closure, busy } = scanCell(d, h);
-      if (!inWh || closure || busy) return true;
+      const { inWh, closure, busy, mine } = scanCell(d, h);
+      if (!inWh || closure || busy || mine) return true;
     }
     return false;
   }
@@ -129,6 +134,7 @@ export function WeekHourGrid({
 
     if (!a) {
       setA({ d: dayIndex, h: hour });
+      setHover({ d: dayIndex, h: hour });
       return;
     }
 
@@ -153,6 +159,12 @@ export function WeekHourGrid({
     const end = addHours(hourCellDate(weekStart, dd1, hh1), 1);
     onPickRange(start.toISOString(), end.toISOString());
     setA(null);
+    setHover(null);
+  }
+
+  function onCellEnter(dayIndex: number, hour: number) {
+    if (!a || readOnly || !interactive) return;
+    setHover({ d: dayIndex, h: hour });
   }
 
   return (
@@ -200,15 +212,37 @@ export function WeekHourGrid({
                   className={paint(dayIndex, hour)}
                   title={`${format(day, "dd.MM")} ${hour}:00`}
                   onClick={() => onCellClick(dayIndex, hour)}
+                  onMouseEnter={() => onCellEnter(dayIndex, hour)}
                 />
               ))}
             </tr>
           ))}
         </tbody>
       </table>
+      <div className="cal-legend" style={{ marginTop: "0.65rem" }}>
+        <span>
+          <i className="swatch free" /> свободно
+        </span>
+        <span>
+          <i className="swatch busy" /> занято
+        </span>
+        <span>
+          <i className="swatch mine" /> ваши брони
+        </span>
+        <span>
+          <i className="swatch closure" /> закрыто
+        </span>
+      </div>
       {interactive && !readOnly && (
-        <p className="muted" style={{ marginTop: "0.5rem" }}>
-          Два клика по свободным часам: первый — начало, второй — конец интервала.
+        <p className="muted" style={{ marginTop: "0.35rem" }}>
+          {a
+            ? "Второй клик — конец интервала (только свободные часы в рабочее время)."
+            : "Два клика по свободным ячейкам: начало и конец, затем «Забронировать»."}
+        </p>
+      )}
+      {!interactive && !readOnly && (
+        <p className="muted" style={{ marginTop: "0.35rem" }}>
+          Войдите как арендатор, чтобы выбрать часы и забронировать.
         </p>
       )}
     </div>

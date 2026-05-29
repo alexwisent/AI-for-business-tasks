@@ -63,9 +63,11 @@ export function EquipmentPublicPage() {
   return (
     <div>
       {el}
-      <p className="muted">
-        <Link to={`/s/${studio.slug}`}>← {studio.name}</Link>
-      </p>
+      <div className="page-header">
+        <Link to={`/s/${studio.slug}`} className="back-link">
+          ← {studio.name}
+        </Link>
+      </div>
 
       <div className="eq-card" style={{ marginBottom: "1rem" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1.1fr", gap: "1rem" }}>

@@ -24,7 +24,8 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="card" style={{ maxWidth: 480 }}>
+    <div className="auth-wrap">
+      <div className="card auth-card" style={{ maxWidth: 480 }}>
       <h2 style={{ marginTop: 0 }}>Регистрация</h2>
       <form onSubmit={onSubmit}>
         <div className="field">
@@ -55,6 +56,7 @@ export function RegisterPage() {
       <p className="muted">
         Уже есть аккаунт? <Link to="/login">Вход</Link>
       </p>
+      </div>
     </div>
   );
 }

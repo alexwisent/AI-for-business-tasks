@@ -22,7 +22,8 @@ export function LoginPage() {
   }
 
   return (
-    <div className="card" style={{ maxWidth: 420 }}>
+    <div className="auth-wrap">
+      <div className="card auth-card">
       <h2 style={{ marginTop: 0 }}>Вход</h2>
       <form onSubmit={onSubmit}>
         <div className="field">
@@ -46,6 +47,7 @@ export function LoginPage() {
       <p className="muted">
         Нет аккаунта? <Link to="/register">Регистрация</Link>
       </p>
+      </div>
     </div>
   );
 }

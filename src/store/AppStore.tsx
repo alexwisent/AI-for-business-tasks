@@ -47,8 +47,8 @@ type Ctx = {
   deleteLocation: (id: string) => void;
   upsertEquipment: (eq: Equipment) => void;
   deleteEquipment: (id: string) => void;
-  upsertCategory: (c: LocationCategory) => void;
-  deleteCategory: (id: string) => void;
+  upsertCategory: (c: LocationCategory, byUserId: string) => { ok: boolean; error?: string };
+  deleteCategory: (id: string, byUserId: string) => { ok: boolean; error?: string };
   addBooking: (b: Omit<Booking, "id">) => { ok: boolean; error?: string };
   cancelBooking: (id: string, byUserId: string) => { ok: boolean; error?: string };
   addReview: (r: Omit<Review, "id" | "createdAt">) => void;
@@ -225,26 +225,47 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const upsertCategory = useCallback(
-    (c: LocationCategory) => {
+    (c: LocationCategory, byUserId: string) => {
+      const name = c.name.trim();
+      if (!name) return { ok: false, error: "Укажите название" };
+
+      const existing = data.locationCategories.find((x) => x.id === c.id);
+      if (existing && existing.ownerId !== byUserId) {
+        return { ok: false, error: "Редактировать может только создатель категории" };
+      }
+
+      const entry: LocationCategory = {
+        id: c.id,
+        ownerId: existing?.ownerId ?? byUserId,
+        name,
+      };
+
       patch((d) => {
-        const i = d.locationCategories.findIndex((x) => x.id === c.id);
-        if (i >= 0) d.locationCategories[i] = c;
-        else d.locationCategories.push(c);
+        const i = d.locationCategories.findIndex((x) => x.id === entry.id);
+        if (i >= 0) d.locationCategories[i] = entry;
+        else d.locationCategories.push(entry);
       });
+      return { ok: true };
     },
-    [patch],
+    [data.locationCategories, patch],
   );
 
   const deleteCategory = useCallback(
-    (id: string) => {
+    (id: string, byUserId: string) => {
+      const cat = data.locationCategories.find((x) => x.id === id);
+      if (!cat) return { ok: false, error: "Категория не найдена" };
+      if (cat.ownerId !== byUserId) {
+        return { ok: false, error: "Удалить может только создатель категории" };
+      }
       patch((d) => {
         d.locationCategories = d.locationCategories.filter((x) => x.id !== id);
         for (const l of d.locations) {
           l.categoryIds = l.categoryIds.filter((cid) => cid !== id);
         }
       });
+      return { ok: true };
     },
-    [patch],
+    [data.locationCategories, patch],
   );
 
   const addBooking = useCallback(

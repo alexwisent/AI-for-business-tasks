@@ -18,11 +18,13 @@ export function segmentsForLocation(
   }
   for (const b of data.bookings) {
     if (b.type !== "location" || b.resourceId !== locationId || b.status !== "active") continue;
+    const mine = b.renterId === myUserId;
     segs.push({
       start: b.start,
       end: b.end,
-      kind: b.renterId === myUserId ? "mine" : "busy",
+      kind: mine ? "mine" : "busy",
       title: b.renterNickname,
+      bookingId: mine ? b.id : undefined,
     });
   }
   return segs;
@@ -49,11 +51,13 @@ export function segmentsForEquipment(
       b.unitIndex !== unitIndex
     )
       continue;
+    const mine = b.renterId === myUserId;
     segs.push({
       start: b.start,
       end: b.end,
-      kind: b.renterId === myUserId ? "mine" : "busy",
+      kind: mine ? "mine" : "busy",
       title: b.renterNickname,
+      bookingId: mine ? b.id : undefined,
     });
   }
   return segs;

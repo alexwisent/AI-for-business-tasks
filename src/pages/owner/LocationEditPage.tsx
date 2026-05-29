@@ -19,8 +19,8 @@ export function LocationEditPage() {
   const existing = !isNew ? data.locations.find((l) => l.id === lid) : undefined;
 
   const cats = useMemo(
-    () => data.locationCategories.filter((c) => c.ownerId === user?.id),
-    [data.locationCategories, user?.id],
+    () => [...data.locationCategories].sort((a, b) => a.name.localeCompare(b.name, "ru")),
+    [data.locationCategories],
   );
 
   const [title, setTitle] = useState("");
@@ -206,7 +206,10 @@ export function LocationEditPage() {
         </div>
       )}
       <h3>Категории локации</h3>
-      <p className="muted">Создайте категории в разделе «Категории локаций».</p>
+      <p className="muted">
+        Общий список категорий для всех владельцев. Новую категорию добавьте в разделе «Категории локаций».
+      </p>
+      {cats.length === 0 && <p className="muted">Категорий пока нет — любой владелец может добавить их в «Категории локаций».</p>}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
         {cats.map((c) => (
           <label key={c.id} className="pill" style={{ cursor: "pointer" }}>

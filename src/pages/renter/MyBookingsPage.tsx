@@ -1,9 +1,11 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
+import { useToast } from "@/components/Shell";
 import { useApp } from "@/store/AppStore";
 
 export function MyBookingsPage() {
   const { data, user, cancelBooking } = useApp();
+  const { show, el } = useToast();
   const rows = useMemo(
     () => data.bookings.filter((b) => b.renterId === user!.id).sort((a, b) => b.start.localeCompare(a.start)),
     [data.bookings, user],
@@ -11,6 +13,7 @@ export function MyBookingsPage() {
 
   return (
     <div>
+      {el}
       <h1 style={{ marginTop: 0 }}>Мои брони</h1>
       <p className="muted">
         Перейдите в <Link to="/">каталог</Link>, чтобы найти студию.
@@ -51,7 +54,10 @@ export function MyBookingsPage() {
                     type="button"
                     className="btn danger"
                     onClick={() => {
-                      if (confirm("Отменить бронь?")) cancelBooking(b.id, user!.id);
+                      if (!confirm("Отменить бронь?")) return;
+                      const r = cancelBooking(b.id, user!.id);
+                      if (!r.ok) show(r.error ?? "Не удалось отменить");
+                      else show("Бронь отменена");
                     }}
                   >
                     Отменить

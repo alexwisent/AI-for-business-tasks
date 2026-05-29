@@ -13,7 +13,7 @@ import { useApp, useLocation } from "@/store/AppStore";
 export function LocationPublicPage() {
   const { id } = useParams();
   const loc = useLocation(id);
-  const { data, user, addBooking } = useApp();
+  const { data, user, addBooking, cancelBooking } = useApp();
   const { show, el } = useToast();
 
   const studio = useMemo(() => data.studios.find((s) => s.id === loc?.studioId), [data.studios, loc?.studioId]);
@@ -29,12 +29,25 @@ export function LocationPublicPage() {
   const segs = useMemo(() => {
     if (!loc || !studio) return [];
     return segmentsForLocation(data, loc.id, studio.id, user?.id);
-  }, [data, loc, studio, user?.id]);
+  }, [data.bookings, data.closures, loc, studio, user?.id]);
+
+  const myActiveBookings = useMemo(() => {
+    if (!loc || !user) return [];
+    return data.bookings
+      .filter(
+        (b) =>
+          b.type === "location" &&
+          b.resourceId === loc.id &&
+          b.renterId === user.id &&
+          b.status === "active",
+      )
+      .sort((a, b) => a.start.localeCompare(b.start));
+  }, [data.bookings, loc, user]);
 
   const cats = useMemo(() => {
     if (!loc || !studio) return [];
-    return data.locationCategories.filter((c) => loc.categoryIds.includes(c.id) && c.ownerId === studio.ownerId);
-  }, [data.locationCategories, loc, studio]);
+    return data.locationCategories.filter((c) => loc.categoryIds.includes(c.id));
+  }, [data.locationCategories, loc]);
 
   if (!loc || !studio) return <div className="card">Локация не найдена.</div>;
 
@@ -62,18 +75,31 @@ export function LocationPublicPage() {
       totalPrice: price,
     });
     if (!r.ok) show(r.error ?? "Не удалось");
-    else show("Бронь создана");
+    else {
+      show("Бронь создана — видна в календаре занятости");
+      setPending(null);
+    }
+  }
+
+  function handleCancelBooking(bookingId: string) {
+    if (!user) return;
+    if (!confirm("Отменить эту бронь? Время снова станет свободным в календаре.")) return;
+    const r = cancelBooking(bookingId, user.id);
+    if (!r.ok) show(r.error ?? "Не удалось отменить");
+    else show("Бронь отменена");
     setPending(null);
   }
 
   return (
     <div>
       {el}
-      <p className="muted">
-        <Link to={`/s/${studio.slug}`}>← {studio.name}</Link>
-      </p>
+      <div className="page-header">
+        <Link to={`/s/${studio.slug}`} className="back-link">
+          ← {studio.name}
+        </Link>
+      </div>
 
-      <div className="grid cols-2" style={{ alignItems: "start" }}>
+      <div className="grid cols-2 location-hero-grid">
         <div>
           <ImageCarousel images={loc.images} />
         </div>
@@ -88,8 +114,8 @@ export function LocationPublicPage() {
           <p>
             <strong>Что есть:</strong> {loc.amenities}
           </p>
-          <p>
-            <strong>Стоимость:</strong> {loc.hourlyPrice} ₽/ч · {loc.halfDayPrice} ₽/полдня · {loc.dayPrice} ₽/день
+          <p className="price-tag">
+            {loc.hourlyPrice} ₽/ч · {loc.halfDayPrice} ₽/полдня · {loc.dayPrice} ₽/день
           </p>
           {cats.length > 0 && (
             <p>
@@ -113,6 +139,9 @@ export function LocationPublicPage() {
 
       <div className="card" style={{ marginTop: "1rem" }}>
         <h2 style={{ marginTop: 0 }}>Календарь занятости</h2>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Все активные брони локации отображаются в сетке. Выберите свободный интервал и нажмите «Забронировать».
+        </p>
         <WeekHourGrid
           weekAnchor={week}
           onWeekAnchorChange={setWeek}
@@ -122,6 +151,22 @@ export function LocationPublicPage() {
           onPickRange={(s, e) => setPending({ start: s, end: e })}
         />
       </div>
+
+      {user?.role === "renter" && myActiveBookings.length > 0 && (
+        <div className="card" style={{ marginTop: "1rem" }}>
+          <h3 style={{ marginTop: 0 }}>Ваши брони этой локации</h3>
+          <ul style={{ margin: 0, paddingLeft: "1.1rem" }}>
+            {myActiveBookings.map((b) => (
+              <li key={b.id} style={{ marginBottom: "0.5rem" }}>
+                {new Date(b.start).toLocaleString()} — {new Date(b.end).toLocaleString()} · {b.totalPrice} ₽{" "}
+                <button type="button" className="btn danger" style={{ marginLeft: "0.35rem" }} onClick={() => handleCancelBooking(b.id)}>
+                  Отменить бронь
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {pending && (
         <div className="card" style={{ marginTop: "1rem" }}>
@@ -145,56 +190,19 @@ export function LocationPublicPage() {
       )}
 
       <div className="card" style={{ marginTop: "1rem" }}>
-        <h2 style={{ marginTop: 0 }}>Комментарии</h2>
-        <CommentsBlock locationId={loc.id} />
-      </div>
-
-      <div className="card" style={{ marginTop: "1rem" }}>
-        <h2 style={{ marginTop: 0 }}>Отзывы</h2>
         <ReviewsBlock locationId={loc.id} />
       </div>
     </div>
   );
 }
 
-function CommentsBlock({ locationId }: { locationId: string }) {
-  const { data, user, addComment } = useApp();
-  const [text, setText] = useState("");
-  const rows = useMemo(
-    () => data.comments.filter((c) => c.locationId === locationId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    [data.comments, locationId],
-  );
+function starLine(rating: number) {
+  const filled = Math.min(5, Math.max(0, Math.round(rating)));
   return (
-    <>
-      {rows.map((c) => (
-        <div key={c.id} style={{ borderBottom: "1px solid #e2e8f0", padding: "0.5rem 0" }}>
-          <strong>{c.nickname}</strong>{" "}
-          <span className="muted">{new Date(c.createdAt).toLocaleString()}</span>
-          <p style={{ margin: "0.35rem 0 0" }}>{c.text}</p>
-        </div>
-      ))}
-      {rows.length === 0 && <p className="muted">Комментариев пока нет.</p>}
-      {user && (
-        <div style={{ marginTop: "0.75rem" }}>
-          <div className="field">
-            <label>Новый комментарий</label>
-            <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} />
-          </div>
-          <button
-            type="button"
-            className="btn primary"
-            onClick={() => {
-              if (!text.trim()) return;
-              addComment({ locationId, userId: user.id, nickname: user.nickname, text: text.trim() });
-              setText("");
-            }}
-          >
-            Отправить
-          </button>
-        </div>
-      )}
-      {!user && <p className="muted">Войдите, чтобы оставить комментарий.</p>}
-    </>
+    <span className="stars" aria-hidden>
+      {"★".repeat(filled)}
+      {"☆".repeat(5 - filled)}
+    </span>
   );
 }
 
@@ -207,13 +215,38 @@ function ReviewsBlock({ locationId }: { locationId: string }) {
     () => data.reviews.filter((r) => r.locationId === locationId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     [data.reviews, locationId],
   );
+
+  const averageRating = useMemo(() => {
+    if (rows.length === 0) return null;
+    const sum = rows.reduce((acc, r) => acc + r.stars, 0);
+    return sum / rows.length;
+  }, [rows]);
+
+  const averageLabel =
+    averageRating !== null
+      ? averageRating.toLocaleString("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+      : null;
+
   return (
     <>
+      <div className="reviews-head">
+        <h2>Отзывы</h2>
+        {averageRating !== null && averageLabel ? (
+          <>
+            {starLine(averageRating)}
+            <span className="reviews-avg" aria-label={`Средняя оценка ${averageLabel} из 5`}>
+              {averageLabel}
+            </span>
+          </>
+        ) : (
+          <span className="muted">пока нет оценок</span>
+        )}
+      </div>
       {rows.map((r) => (
-        <div key={r.id} style={{ borderBottom: "1px solid #e2e8f0", padding: "0.75rem 0" }}>
+        <div key={r.id} className="review-item">
           <div>
             <strong>{r.nickname}</strong>{" "}
-            <span className="stars">{"★".repeat(r.stars)}{"☆".repeat(5 - r.stars)}</span>
+            {starLine(r.stars)}
           </div>
           <p style={{ margin: "0.35rem 0" }}>{r.text}</p>
           <div className="grid cols-3">
